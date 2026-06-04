@@ -1,0 +1,55 @@
+@page "/products"
+@rendermode InteractiveServer
+
+@using InventorySystem.Data
+@using InventorySystem.Models
+@using Microsoft.EntityFrameworkCore
+
+@inject AppDbContext DbContext
+
+<h3>Бараа жагсаалт</h3>
+
+@if (products == null)
+{
+    <p>Ачааллаж байна...</p>
+}
+else if (!products.Any())
+{
+    <p>Бараа байхгүй байна.</p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Нэр</th>
+                <th>Үнэ</th>
+                <th>Нөөц</th>
+                <th>Ангилал</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in products)
+            {
+                <tr>
+                    <td>@p.Name</td>
+                    <td>@p.Price.ToString("N0") ₮</td>
+                    <td>@p.StockQuantity</td>
+                    <td>@p.Category?.Name</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Product>? products;
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await DbContext.Products
+            .Include(p => p.Category)
+            .Where(p => p.IsActive)
+            .ToListAsync();
+    }
+}
