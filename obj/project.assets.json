@@ -3128,11 +3128,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Gerelee\\InventorySystem\\InventorySystem.csproj",
+      "projectUniqueName": "C:\\Users\\Gerelee\\Intern\\InventorySystem.csproj",
       "projectName": "InventorySystem",
-      "projectPath": "C:\\Users\\Gerelee\\InventorySystem\\InventorySystem.csproj",
+      "projectPath": "C:\\Users\\Gerelee\\Intern\\InventorySystem.csproj",
       "packagesPath": "C:\\Users\\Gerelee\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Gerelee\\InventorySystem\\obj\\",
+      "outputPath": "C:\\Users\\Gerelee\\Intern\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

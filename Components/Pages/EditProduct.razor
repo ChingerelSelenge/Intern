@@ -1,0 +1,123 @@
+@page "/products/edit/{Id:int}"
+@rendermode InteractiveServer
+
+@using InventorySystem.DTOs
+@using InventorySystem.Models
+@using InventorySystem.Services
+
+@inject IProductService ProductService
+@inject NavigationManager Nav
+
+<PageTitle>Бараа засах</PageTitle>
+
+<h3>Бараа засах</h3>
+
+@if (notFound)
+{
+    <div class="alert alert-danger">Бараа олдсонгүй!</div>
+    <a href="/products" class="btn btn-secondary">Буцах</a>
+}
+else if (model == null)
+{
+    <p>Ачааллаж байна...</p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-6">
+            <EditForm Model="model"
+                      OnValidSubmit="HandleSubmit"
+                      FormName="edit-product-form"
+                      Method="post">
+
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <div class="mb-3">
+                    <label class="form-label">Бараа нэр</label>
+                    <InputText @bind-Value="model.Name" class="form-control" />
+                    <ValidationMessage For="() => model.Name" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Үнэ (₮)</label>
+                    <InputNumber TValue="decimal?" @bind-Value="model.Price" class="form-control" />
+                    <ValidationMessage For="() => model.Price" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Нөөц</label>
+                    <InputNumber TValue="int?" @bind-Value="model.StockQuantity" class="form-control" />
+                    <ValidationMessage For="() => model.StockQuantity" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Ангилал</label>
+                    <InputSelect @bind-Value="model.CategoryId" class="form-select">
+                        @foreach (var cat in categories)
+                        {
+                            <option value="@cat.Id">@cat.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => model.CategoryId" class="text-danger" />
+                </div>
+                @if (!string.IsNullOrEmpty(errorMsg))
+                {
+                    <div class="alert alert-danger">@errorMsg</div>
+                }
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                        @(isSaving ? "Хадгалж байна..." : "Хадгалах")
+                    </button>
+                    <a href="/products" class="btn btn-secondary">Буцах</a>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private UpdateProductDto? model;
+    private IEnumerable<Category> categories = [];
+    private bool notFound = false;
+    private string errorMsg = "";
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await ProductService.GetCategoriesAsync();
+        var product = await ProductService.GetByIdAsync(Id);
+
+        if (product == null)
+        {
+            notFound = true;
+            return;
+        }
+
+        model = new UpdateProductDto
+        {
+            Name = product.Name,
+            Price = product.Price,
+            StockQuantity = product.StockQuantity,
+            CategoryId = product.CategoryId
+        };
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (model == null) return;
+
+        isSaving = true;
+        var (ok, err) = await ProductService.UpdateAsync(Id, model);
+
+        if (ok)
+        {
+            Nav.NavigateTo("/products");
+        }
+        else
+        {
+            errorMsg = err;
+            isSaving = false;
+        }
+    }
+}

@@ -20,7 +20,7 @@ namespace InventorySystem.Data
             mb.Entity<Category>().HasData(
                 new Category { Id = 1, Name = "Хоол хүнс" },
                 new Category { Id = 2, Name = "Электроник" },
-                new Category { Id = 3, Name = "Бичгийн хэрэгсэл" }
+                new Category { Id = 3, Name = "Бичиг хэрэг" }
             );
 
             mb.Entity<Product>().HasData(

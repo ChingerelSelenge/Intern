@@ -57,7 +57,7 @@ namespace InventorySystem.Migrations
                 {
                     { 1, "Хоол хүнс" },
                     { 2, "Электроник" },
-                    { 3, "Бичгийн хэрэгсэл" }
+                    { 3, "Бичиг хэрэг" }
                 });
 
             migrationBuilder.InsertData(

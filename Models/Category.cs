@@ -1,16 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace InventorySystem.Models
+namespace InventorySystem.Models;
+
+public class Category
 {
-    public class Category
-    {
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        [Required]
-        [StringLength(100)]
-        public string Name { get; set; } = string.Empty;
+    [Required]
+    [StringLength(100)]
+    public string Name { get; set; } = "";
 
-        public ICollection<Product> Products { get; set; }
-            = new List<Product>();
-    }
+    public ICollection<Product> Products { get; set; } = new List<Product>();
 }

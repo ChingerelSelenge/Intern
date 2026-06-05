@@ -1,0 +1,91 @@
+@page "/products/create"
+@rendermode InteractiveServer
+
+@using InventorySystem.Services
+@using InventorySystem.DTOs
+@using InventorySystem.Models
+
+@inject IProductService ProductService
+@inject NavigationManager Nav
+
+<PageTitle>Шинэ бараа нэмэх</PageTitle>
+
+<h3>Бараа нэмэх</h3>
+<div class="row">
+<div class="col-md-6">
+    <EditForm Model="model"
+              OnValidSubmit="HandleSubmit"
+              FormName="create-product-form"
+              Method="post">
+
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+
+        <div class="mb-3">
+            <label class="form-label">Бараа нэр</label>
+            <InputText @bind-Value="model.Name" class="form-control" placeholder="Бараа нэр оруулна уу" />
+            <ValidationMessage For="() => model.Name" class="text-danger" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Үнэ (₮)</label>
+            <InputNumber TValue="decimal" @bind-Value="model.Price" class="form-control" />
+            <ValidationMessage For="() => model.Price" class="text-danger" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Нөөцийн тоо</label>
+            <InputNumber TValue="int" @bind-Value="model.StockQuantity" class="form-control" />
+            <ValidationMessage For="() => model.StockQuantity" class="text-danger" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Ангилал</label>
+            <InputSelect @bind-Value="model.CategoryId" class="form-select">
+                <option value="0">-- Ангилал сонгоно уу --</option>
+                @foreach (var cat in categories)
+                {
+                    <option value="@cat.Id">@cat.Name</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="() => model.CategoryId" class="text-danger" />
+        </div>
+        @if (!string.IsNullOrEmpty(errorMsg))
+        {
+            <div class="alert alert-danger">@errorMsg</div>
+        }
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                @(isSaving ? "Хадгалж байна..." : "Хадгалах")
+            </button>
+            <a href="/products" class="btn btn-secondary">Буцах</a>
+        </div>
+    </EditForm>
+</div>
+</div>
+
+@code {
+    private CreateProductDto model = new();
+    private IEnumerable<Category> categories = [];
+    private string errorMsg = "";
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await ProductService.GetCategoriesAsync();
+    }
+
+    private async Task HandleSubmit()
+    {
+        isSaving = true;
+        errorMsg = "";
+        var (ok, err) = await ProductService.CreateAsync(model);
+
+        if (ok)
+        {
+            Nav.NavigateTo("/products");
+        }
+        else
+        {
+            errorMsg = err;
+            isSaving = false;
+        }
+    }
+} 

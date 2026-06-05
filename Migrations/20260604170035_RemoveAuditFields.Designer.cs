@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InventorySystem.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260604035158_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260604170035_RemoveAuditFields")]
+    partial class RemoveAuditFields
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -56,7 +56,7 @@ namespace InventorySystem.Migrations
                         new
                         {
                             Id = 3,
-                            Name = "Бичгийн хэрэгсэл"
+                            Name = "Бичиг хэрэг"
                         });
                 });
 
@@ -87,6 +87,9 @@ namespace InventorySystem.Migrations
 
                     b.Property<int>("StockQuantity")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 

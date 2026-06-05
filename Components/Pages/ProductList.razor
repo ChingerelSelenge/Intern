@@ -1,55 +1,102 @@
 @page "/products"
 @rendermode InteractiveServer
 
-@using InventorySystem.Data
-@using InventorySystem.Models
-@using Microsoft.EntityFrameworkCore
+@using InventorySystem.Services
+@using InventorySystem.DTOs
 
-@inject AppDbContext DbContext
+@inject IProductService ProductService
+@inject NavigationManager Nav
 
-<h3>Бараа жагсаалт</h3>
+<PageTitle>Бараа жагсаалт</PageTitle>
 
-@if (products == null)
-{
-    <p>Ачааллаж байна...</p>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Бараа жагсаалт</h3>
+    <a href="/products/create" class="btn btn-primary">+ Шинэ бараа</a>
+</div>
+
+@if (isLoading) {
+    <div class="text-center py-4">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2">Ачааллаж байна...</p>
+    </div>
 }
-else if (!products.Any())
-{
-    <p>Бараа байхгүй байна.</p>
+else if (!products.Any()) {
+    <div class="alert alert-info">
+        Бараа байхгүй байна.
+    </div>
 }
 else
 {
-    <table class="table table-bordered">
-        <thead>
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
             <tr>
                 <th>Нэр</th>
+                <th>Ангилал</th>
                 <th>Үнэ</th>
                 <th>Нөөц</th>
-                <th>Ангилал</th>
+                <th>Үйлдэл</th>
             </tr>
         </thead>
+
         <tbody>
             @foreach (var p in products)
             {
                 <tr>
                     <td>@p.Name</td>
-                    <td>@p.Price.ToString("N0") ₮</td>
-                    <td>@p.StockQuantity</td>
-                    <td>@p.Category?.Name</td>
+                    <td>@p.CategoryName</td>
+                    <td>@p.Price.ToString("N0")</td>
+                    <td>
+                        <span class="badge @(@p.StockQuantity < 10 ? "bg-danger" : "bg-success")">
+                            @p.StockQuantity
+                        </span>
+                    </td>
+                    <td>
+                        <a href="/products/edit/@p.Id" class="btn btn-sm btn-outline-primary">
+                            Засах
+                        </a>
+                        <button class="btn btn-sm btn-outline-danger ms-1"
+                            @onclick="() => DeleteProduct(p.Id)">
+                            Устгах
+                        </button>
+                    </td>
                 </tr>
             }
         </tbody>
     </table>
 }
 
-@code {
-    private List<Product>? products;
+@if (!string.IsNullOrEmpty(message)) { 
+    <div class="alert alert-success alert-dismissible mt-3"> @message 
+        <button class="btn-close" 
+            @onclick="() => message = string.Empty">
+        </button> 
+    </div> 
+}
 
+@code {
+    private IEnumerable<ProductResponseDto> products = new List<ProductResponseDto>();
+    private bool isLoading = true;
+    private string message = "";
     protected override async Task OnInitializedAsync()
     {
-        products = await DbContext.Products
-            .Include(p => p.Category)
-            .Where(p => p.IsActive)
-            .ToListAsync();
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        isLoading = true;
+        products = await ProductService.GetAllAsync();
+        isLoading = false;
+    }
+
+    private async Task DeleteProduct(int id)
+    {
+        var ok = await ProductService.DeleteAsync(id);
+
+        if (ok)
+        {
+            message = "Бараа амжилттай устгагдлаа.";
+            await LoadProducts();
+        }
     }
 }
