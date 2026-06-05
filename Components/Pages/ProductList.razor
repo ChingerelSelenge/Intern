@@ -1,8 +1,10 @@
 @page "/products"
 @rendermode InteractiveServer
 
-@using InventorySystem.Services
 @using InventorySystem.DTOs
+@using InventorySystem.Models
+@using InventorySystem.Services
+@using InventorySystem.Components.Shared
 
 @inject IProductService ProductService
 @inject NavigationManager Nav
@@ -10,93 +12,205 @@
 <PageTitle>Бараа жагсаалт</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>Бараа жагсаалт</h3>
+    <h3 class="mb-0">Бараа жагсаалт</h3>
     <a href="/products/create" class="btn btn-primary">+ Шинэ бараа</a>
 </div>
 
-@if (isLoading) {
-    <div class="text-center py-4">
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-md-5">
+                <input type="text" class="form-control" placeholder="Нэрээр хайх..." 
+                    @bind="searchTerm" @bind:event="oninput" @onchange="OnSearchChanged" />
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" @bind="selectedCategoryId" @bind:after="ApplyFilter">
+                    <option value="0">-- Бүх ангилал --</option>
+                    @foreach (var cat in categories)
+                    {
+                        <option value="@cat.Id">@cat.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" @bind="sortBy" @bind:after="ApplyFilter">
+                    <option value="name">Нэрээр эрэмбэлэх</option>
+                    <option value="price_asc">Үнэ: багаас их рүү</option>
+                    <option value="price_desc">Үнэ: ихээс бага руу</option>
+                    <option value="stock">Нөөцөөр</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <small class="text-muted">
+        Нийт @filteredProducts.Count() бараа
+        @if (!string.IsNullOrEmpty(searchTerm))
+        {
+            <span>· "@searchTerm" хайлт</span>
+        }
+    </small>
+    <small class="text-muted">Хуудас @currentPage / @totalPages</small>
+</div>
+
+@if (isLoading)
+{
+    <div class="text-center py-5">
         <div class="spinner-border text-primary"></div>
-        <p class="mt-2">Ачааллаж байна...</p>
+        <p class="mt-2 text-muted">Ачааллаж байна...</p>
     </div>
 }
-else if (!products.Any()) {
-    <div class="alert alert-info">
-        Бараа байхгүй байна.
+else if (!filteredProducts.Any())
+{
+    <div class="alert alert-info text-center">
+        @(string.IsNullOrEmpty(searchTerm) ? "Бараа байхгүй байна." : $"'{searchTerm}' хайлтаар үр дүн олдсонгүй.")
     </div>
 }
 else
 {
-    <table class="table table-bordered table-striped">
+    <table class="table table-hover table-bordered align-middle">
         <thead class="table-dark">
             <tr>
                 <th>Нэр</th>
                 <th>Ангилал</th>
                 <th>Үнэ</th>
                 <th>Нөөц</th>
-                <th>Үйлдэл</th>
+                <th style="width:140px">Үйлдэл</th>
             </tr>
         </thead>
-
         <tbody>
-            @foreach (var p in products)
+            @foreach (var p in pagedProducts)
             {
                 <tr>
-                    <td>@p.Name</td>
-                    <td>@p.CategoryName</td>
-                    <td>@p.Price.ToString("N0")</td>
+                    <td><strong>@p.Name</strong></td>
+                    <td><span class="badge bg-secondary">@p.CategoryName</span></td>
+                    <td>@p.Price.ToString("N0") ₮</td>
                     <td>
-                        <span class="badge @(@p.StockQuantity < 10 ? "bg-danger" : "bg-success")">
+                        <span class="badge @(p.StockQuantity == 0 ? "bg-danger" : p.StockQuantity < 10 ? "bg-warning text-dark" : "bg-success")">
                             @p.StockQuantity
                         </span>
                     </td>
                     <td>
-                        <a href="/products/edit/@p.Id" class="btn btn-sm btn-outline-primary">
-                            Засах
-                        </a>
-                        <button class="btn btn-sm btn-outline-danger ms-1"
-                            @onclick="() => DeleteProduct(p.Id)">
-                            Устгах
-                        </button>
+                        <a href="/products/edit/@p.Id" class="btn btn-sm btn-outline-primary">E</a>
+                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => ShowDeleteModal(p.Id, p.Name)">D</button>
                     </td>
                 </tr>
             }
         </tbody>
     </table>
+
+    <Pagination CurrentPage="currentPage" TotalPages="totalPages" OnPageChanged="OnPageChanged" />
 }
 
-@if (!string.IsNullOrEmpty(message)) { 
-    <div class="alert alert-success alert-dismissible mt-3"> @message 
-        <button class="btn-close" 
-            @onclick="() => message = string.Empty">
-        </button> 
-    </div> 
+<ConfirmModal IsVisible="showDeleteModal" 
+    Title="Бараа устгах"
+    Message="@($"'{deleteProductName}' барааг устгахдаа итгэлтэй байна уу?")"
+    OnConfirm="ConfirmDelete"
+    OnCancel="CancelDelete" />
+
+@if (!string.IsNullOrEmpty(successMsg))
+{
+    <div class="alert alert-success alert-dismissible position-fixed bottom-0 end-0 m-3" style="z-index:2000;min-width:250px">
+        @successMsg
+        <button class="btn-close" @onclick="() => successMsg = string.Empty"></button>
+    </div>
 }
 
 @code {
-    private IEnumerable<ProductResponseDto> products = new List<ProductResponseDto>();
+    private IEnumerable<ProductResponseDto> allProducts = [];
+    private IEnumerable<ProductResponseDto> filteredProducts = [];
+    private IEnumerable<ProductResponseDto> pagedProducts = [];
+    private IEnumerable<Category> categories = [];
+
+    private string searchTerm = "";
+    private int selectedCategoryId = 0;
+    private string sortBy = "name";
     private bool isLoading = true;
-    private string message = "";
+    private string successMsg = "";
+
+    private int currentPage = 1;
+    private int totalPages = 1;
+    private const int PageSize = 10;
+
+    private bool showDeleteModal = false;
+    private int deleteProductId = 0;
+    private string deleteProductName = "";
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadProducts();
+        categories = await ProductService.GetCategoriesAsync();
+        await LoadAndFilter();
     }
 
-    private async Task LoadProducts()
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        currentPage = 1;
+        await ApplyFilter();
+    }
+
+    private async Task ApplyFilter()
     {
         isLoading = true;
-        products = await ProductService.GetAllAsync();
+        filteredProducts = await ProductService.SearchAsync(
+            searchTerm,
+            selectedCategoryId,
+            sortBy);
+        UpdatePagination();
         isLoading = false;
     }
 
-    private async Task DeleteProduct(int id)
+    private async Task LoadAndFilter()
     {
-        var ok = await ProductService.DeleteAsync(id);
+        allProducts = await ProductService.GetAllAsync();
+        await ApplyFilter();
+    }
+
+    private void UpdatePagination()
+    {
+        var total = filteredProducts.Count();
+        totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)PageSize));
+        currentPage = Math.Min(currentPage, totalPages);
+        pagedProducts = filteredProducts
+            .Skip((currentPage - 1) * PageSize)
+            .Take(PageSize);
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        currentPage = page;
+        pagedProducts = filteredProducts
+            .Skip((currentPage - 1) * PageSize)
+            .Take(PageSize);
+        await Task.CompletedTask;
+    }
+
+    private void ShowDeleteModal(int id, string name)
+    {
+        deleteProductId = id;
+        deleteProductName = name;
+        showDeleteModal = true;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        showDeleteModal = false;
+        var ok = await ProductService.DeleteAsync(deleteProductId);
 
         if (ok)
         {
-            message = "Бараа амжилттай устгагдлаа.";
-            await LoadProducts();
+            successMsg = $"'{deleteProductName}' амжилттай устгагдлаа!";
+            await LoadAndFilter();
+
+            _ = Task.Delay(3000).ContinueWith(_ =>
+            {
+                successMsg = "";
+                InvokeAsync(StateHasChanged);
+            });
         }
     }
+
+    private void CancelDelete() => showDeleteModal = false;
 }

@@ -10,6 +10,7 @@ public class ProductResponseDto
     public int StockQuantity { get; set; }
     public string CategoryName { get; set; } = "";
     public bool IsActive { get; set; }
+    public int CategoryId { get; set; }
 }
 
 public class CreateProductDto

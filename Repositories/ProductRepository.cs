@@ -21,6 +21,7 @@ public class ProductRepository : IProductRepository
                 Name = p.Name,
                 Price = p.Price,
                 StockQuantity = p.StockQuantity,
+                CategoryId = p.CategoryId,
                 CategoryName = p.Category!.Name,
                 IsActive = p.IsActive
             })
